@@ -5,7 +5,8 @@ steps:
       [
         'build',
         '-t',
-        'us-central1-docker.pkg.dev/$PROJECT_ID/anju-100959389/app:${SHORT_SHA}',
+        # Corrected: Removed hyphen from anju100959389
+        'us-central1-docker.pkg.dev/$PROJECT_ID/anju100959389/app:${SHORT_SHA}', 
         '.'
       ]
 
@@ -14,7 +15,8 @@ steps:
     args:
       [
         'push',
-        'us-central1-docker.pkg.dev/$PROJECT_ID/anju-100959389/app:${SHORT_SHA}'
+        # Corrected: Removed hyphen from anju100959389
+        'us-central1-docker.pkg.dev/$PROJECT_ID/anju100959389/app:${SHORT_SHA}' 
       ]
 
   # Step 3: Deploy to Cloud Run
@@ -26,7 +28,8 @@ steps:
         'deploy',
         'anju-100959389-service',
         '--image',
-        'us-central1-docker.pkg.dev/$PROJECT_ID/anju-100959389/app:${SHORT_SHA}',
+        # Corrected: Removed hyphen from anju100959389
+        'us-central1-docker.pkg.dev/$PROJECT_ID/anju100959389/app:${SHORT_SHA}', 
         '--region',
         'us-central1',
         '--platform',
