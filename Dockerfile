@@ -1,19 +1,16 @@
-# Use a small, fast Node image
 FROM node:18-alpine
 
-# Create app directory
 WORKDIR /app
 
-# Install only production dependencies first (better cache)
+# Install production dependencies (if package-lock.json exists use ci for reproducible installs)
 COPY package*.json ./
-RUN npm ci --only=production
+RUN if [ -f package-lock.json ]; then npm ci --only=production; else npm install --production; fi
 
-# Copy the rest of the source
+# Copy source
 COPY . .
 
-# Cloud Run listens on 0.0.0.0:8080
+# Cloud Run expects the app to listen on PORT env variable and typically uses 8080
 ENV PORT=8080
 EXPOSE 8080
 
-# Start the app (uses "start" from package.json)
 CMD ["npm", "start"]
