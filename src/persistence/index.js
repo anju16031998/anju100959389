@@ -1,44 +1,58 @@
 const express = require('express');
 const app = express();
 
-// --- 1. Database Initialization (Using your logic) ---
+// --- 1. Database Initialization (Safe Implementation) ---
 
-// Assuming your database selector logic is in a file like 'db.js' or similar,
-// which is then imported by index.js to use the DB connection object.
-// We'll put your logic into a simple selector function for clarity.
-
-// NOTE: Ensure your './postgres' and './sqlite' files export a usable DB object
-const initializeDb = () => {
-    if (process.env.POSTGRES_HOST) {
-        console.log("Using PostgreSQL connection.");
-        // This line assumes you have a file named 'postgres.js' in the same directory (src)
-        return require('./postgres'); 
+let db = null;
+try {
+    const initializeDb = () => {
+        if (process.env.POSTGRES_HOST) {
+            console.log("Attempting to use PostgreSQL.");
+            // This requires either './postgres.js' or 'src/postgres.js' to exist
+            return require('./postgres'); 
+        } else {
+            console.log("Attempting to use SQLite.");
+            // This requires either './sqlite.js' or 'src/sqlite.js' to exist
+            return require('./sqlite');
+        }
+    };
+    
+    db = initializeDb();
+    
+    // *** CRITICAL FIX: Check if the 'init' function exists before calling it ***
+    if (db && typeof db.init === 'function') {
+        db.init();
+        console.log("Database init() function executed successfully.");
     } else {
-        console.log("Using SQLite connection.");
-        // This line assumes you have a file named 'sqlite.js' in the same directory (src)
-        return require('./sqlite');
+        // This is where your previous error originated. The server will now continue.
+        console.log("NOTE: Database module does not expose an 'init' function or it failed to load.");
     }
-};
 
-const db = initializeDb();
-// You can now use 'db' throughout your application for database operations.
+} catch (e) {
+    console.error("CRITICAL: Database initialization failed during require() or connection!", e);
+    // If initialization fails, set a broken object so the server can still start.
+    db = { 
+        isBroken: true, 
+        query: () => { throw new Error("Database is not connected. Check Cloud Run logs for initialization error."); }
+    }; 
+}
 
-// --- 2. Express Configuration ---
-
-// Middleware to parse JSON requests
+// --- 2. Express Server Setup ---
 app.use(express.json());
 
-// --- 3. Example Route (Adjust as needed) ---
-
+// --- 3. Health Check / Root Route ---
+// This ensures the Cloud Run health check passes.
 app.get('/', (req, res) => {
-    // This is just an example. You would query the 'db' object here.
-    res.status(200).send('Hello from the Node.js Cloud Run container!');
+    if (db && db.isBroken) {
+         // Respond with a 503 if the server started but the DB failed
+         return res.status(503).send('Server is online, but Database connection failed. Check Cloud Run logs.');
+    }
+    // This is the default success message
+    res.status(200).send('Server is online and running! Deployment successful.');
 });
 
-// --- 4. Server Start (The CRITICAL part for Cloud Run) ---
-
-// Cloud Run injects the listening port via the environment variable PORT.
-// We use process.env.PORT, defaulting to 8080, which matches your Dockerfile's configuration.
+// --- 4. Server Start (CRITICAL) ---
+// Use the port provided by Cloud Run, defaulting to 8080
 const PORT = process.env.PORT || 8080; 
 
 app.listen(PORT, () => {
