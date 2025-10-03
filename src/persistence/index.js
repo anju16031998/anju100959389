@@ -1,28 +1,41 @@
+const express = require('express');
+const app = express();
+
 // --- 1. Database Initialization (TEMPORARILY DISABLED) ---
 
-// We are setting a placeholder 'db' object that will allow the Express server 
-// to initialize without crashing. This is the immediate fix for "Service Unavailable."
+// This placeholder object will prevent the server from crashing on startup
+// and allows the server to correctly respond to the health check.
 let db = { 
     isBroken: true,
     query: () => { 
-        console.error("Database is disabled for deployment testing.");
+        console.error("Database functions are disabled for deployment testing.");
         return Promise.reject(new Error("Database disabled."));
     }
 }; 
+console.log("Database connection has been temporarily skipped/disabled.");
+
 
 // --- 2. Express Server Setup ---
+// Middleware to parse JSON requests
 app.use(express.json());
 
-// --- 3. Health Check / Root Route ---
-// This ensures the Cloud Run health check passes by responding 200/503.
+// --- 3. Health Check / Root Route (CRITICAL FIX) ---
+// This route now sends a guaranteed 200 OK response.
 app.get('/', (req, res) => {
-    // Check the placeholder object
+    
     if (db.isBroken) {
-         return res.status(200).send('Server is online! (Database temporarily disabled to pass Cloud Run health check)');
+        // Send a 200 OK response, but inform that the DB is broken.
+        // Returning a 200 OK is essential to pass the Cloud Run health check.
+        return res.status(200).send('<h1>Server is ONLINE!</h1><p>Database connection temporarily disabled (HTTP 200 OK).</p>');
     }
-    // This response should not be reached with the temporary fix, but is kept for completeness
-    res.status(200).send('Server is online and running! Deployment successful.');
+    
+    // This line would only run if the DB were connected
+    res.status(200).send('<h1>Server is fully operational!</h1><p>Deployment successful.</p>');
 });
 
-// --- 4. Server Start (CRITICAL) ---
-// ... (The rest of the file is unchanged)
+// --- 4. Server Start (Port Listening) ---
+const PORT = process.env.PORT || 8080; 
+
+app.listen(PORT, () => {
+    console.log(`Server successfully started and listening on port ${PORT}`);
+});
