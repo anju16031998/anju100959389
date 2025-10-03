@@ -1,25 +1,27 @@
-const express = require('express');
-const app = express();
+// Persistence index: choose sqlite or postgres implementation at runtime
+const sqlite = require('./sqlite');
+const postgres = require('./postgres');
 
-// --- 1. Database and Initialization (REMOVED) ---
-// No database code. The 'db' object is not defined.
+// Choose postgres if any postgres-related env var is present, otherwise sqlite
+const usePostgres = Boolean(
+    process.env.POSTGRES_HOST ||
+    process.env.POSTGRES_HOST_FILE ||
+    process.env.POSTGRES_USER ||
+    process.env.POSTGRES_USER_FILE ||
+    process.env.POSTGRES_PASSWORD ||
+    process.env.POSTGRES_PASSWORD_FILE ||
+    process.env.POSTGRES_DB ||
+    process.env.POSTGRES_DB_FILE
+);
 
-// --- 2. Express Server Setup ---
-// Middleware to parse JSON requests (kept just in case)
-app.use(express.json());
+const impl = usePostgres ? postgres : sqlite;
 
-// --- 3. Root Route (ABSOLUTELY MINIMAL) ---
-// This is the only function that runs when the URL is accessed.
-app.get('/', (req, res) => {
-    // Return a simple, plain text response with a 200 OK status.
-    // This is guaranteed not to interact with any other broken parts of the app.
-    res.status(200).send('Server is online and responding. Task 4 Complete.');
-});
-
-// --- 4. Server Start (CRITICAL) ---
-// Use the port provided by Cloud Run, defaulting to 8080
-const PORT = process.env.PORT || 8080; 
-
-app.listen(PORT, () => {
-    console.log(`Server successfully started and listening on port ${PORT}`);
-});
+module.exports = {
+    init: impl.init,
+    teardown: impl.teardown,
+    getItems: impl.getItems,
+    getItem: impl.getItem,
+    storeItem: impl.storeItem,
+    updateItem: impl.updateItem,
+    removeItem: impl.removeItem,
+};

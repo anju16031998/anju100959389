@@ -14,12 +14,16 @@ app.post('/items', addItem);
 app.put('/items/:id', updateItem);
 app.delete('/items/:id', deleteItem);
 
-db.init().then(() => {
-    app.listen(3000, () => console.log('Listening on port 3000'));
-}).catch((err) => {
-    console.error(err);
-    process.exit(1);
-});
+const PORT = process.env.PORT || 3000;
+
+db.init()
+    .then(() => {
+        app.listen(PORT, () => console.log(`Listening on port ${PORT}`));
+    })
+    .catch(err => {
+        console.error('Failed to initialize DB:', err);
+        process.exit(1);
+    });
 
 const gracefulShutdown = () => {
     db.teardown()
